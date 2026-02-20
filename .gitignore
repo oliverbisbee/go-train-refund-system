@@ -1,0 +1,10 @@
+# Ignore real environment files
+.env
+.env.*
+backend/.env
+frontend/.env
+
+# But keep example env files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
