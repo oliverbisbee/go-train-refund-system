@@ -1,5 +1,4 @@
 import requests
-from google.transit import gtfs_realtime_pb2
 from datetime import datetime, time, timedelta
 from typing import List, Dict, Optional
 from app.core.config import settings
@@ -8,22 +7,19 @@ from app.core.config import settings
 class GTFSService:
     def __init__(self):
         self.api_key = settings.OPENMETROLINX_API_KEY
+        # Don't add .json - API returns JSON by default
         self.realtime_url = settings.GTFS_REALTIME_URL
-        self.headers = {"Authorization": f"Bearer {self.api_key}"}
 
-    def fetch_trip_updates(self) -> gtfs_realtime_pb2.FeedMessage:
-        """Fetch GTFS Realtime TripUpdates feed"""
+    def fetch_trip_updates(self) -> dict:
+        """Fetch GTFS Realtime TripUpdates feed in JSON format"""
         try:
-            response = requests.get(
-                self.realtime_url,
-                headers=self.headers,
-                timeout=30
-            )
+            # API key goes as query parameter
+            url = f"{self.realtime_url}?key={self.api_key}"
+            
+            response = requests.get(url, timeout=30)
             response.raise_for_status()
             
-            feed = gtfs_realtime_pb2.FeedMessage()
-            feed.ParseFromString(response.content)
-            return feed
+            return response.json()
         except Exception as e:
             print(f"Error fetching GTFS feed: {e}")
             raise
@@ -36,28 +32,38 @@ class GTFSService:
         feed = self.fetch_trip_updates()
         delays = []
 
-        for entity in feed.entity:
-            if entity.HasField('trip_update'):
-                trip_update = entity.trip_update
-                trip = trip_update.trip
+        # Parse JSON response
+        if 'entity' not in feed:
+            print("No entities in feed")
+            return delays
 
-                # Filter by route_id (e.g., "01" for Lakeshore West)
-                if trip.route_id != route_id:
-                    continue
+        for entity in feed['entity']:
+            if 'trip_update' not in entity:
+                continue
+                
+            trip_update = entity['trip_update']
+            trip = trip_update.get('trip', {})
 
-                # Extract stop time updates
-                for stop_time_update in trip_update.stop_time_update:
-                    if stop_time_update.HasField('arrival'):
-                        delay_seconds = stop_time_update.arrival.delay
-                        
-                        delays.append({
-                            'trip_id': trip.trip_id,
-                            'route_id': trip.route_id,
-                            'stop_id': stop_time_update.stop_id,
-                            'scheduled_arrival': stop_time_update.arrival.time,
-                            'delay_seconds': delay_seconds,
-                            'timestamp': datetime.fromtimestamp(feed.header.timestamp)
-                        })
+            # Filter by route_id (e.g., "01" for Lakeshore West)
+            if route_id not in trip.get('route_id', ''):
+                continue
+
+            # Extract stop time updates
+            for stop_time_update in trip_update.get('stop_time_updates', []):
+                arrival = stop_time_update.get('arrival', {})
+                
+                if arrival:
+                    delay_seconds = arrival.get('delay', 0)
+                    arrival_time = arrival.get('time', 0)
+                    
+                    delays.append({
+                        'trip_id': trip.get('trip_id'),
+                        'route_id': trip.get('route_id'),
+                        'stop_id': stop_time_update.get('stop_id'),
+                        'scheduled_arrival': arrival_time,
+                        'delay_seconds': delay_seconds,
+                        'timestamp': datetime.now()
+                    })
 
         return delays
 

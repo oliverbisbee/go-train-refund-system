@@ -15,7 +15,7 @@ def get_routes():
     """Return available routes (hardcoded for MVP)"""
     return [
         {
-            "route_id": "01",
+            "route_id": "LW",
             "route_name": "Lakeshore West",
             "description": "Union Station to Aldershot GO"
         }
