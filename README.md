@@ -2,11 +2,6 @@
 
 **Automated delay detection and refund email generation for GO Transit passengers**
 
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 ## 📋 Overview
 
 GO Train Delay Refund Tracker is a web application that automatically monitors GO Transit train delays and generates pre-filled refund email drafts when delays exceed the 15-minute service guarantee threshold. The system eliminates the manual process of checking delays and filling out refund forms by continuously polling live transit data and matching delays to user subscriptions.
