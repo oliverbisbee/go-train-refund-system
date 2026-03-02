@@ -395,9 +395,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support & Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/go-refund-tracker/issues)
-- **Email**: your.email@example.com
-- **Twitter**: @yourusername
+- **Issues**: [GitHub Issues](https://github.com/oliverbisbee/go-train-refund-system/issues)
+- **Email**: oli.bisbee+gorefund@gmail.com
+- **Linkedin** linkedin.com/in/oliver-bisbee
 
 ## ⚠️ Disclaimer
 
@@ -405,4 +405,4 @@ This is an unofficial third-party application and is not affiliated with, endors
 
 ---
 
-**Built with ❤️ by passionate GO Transit commuters**
+**Built with ❤️ by a passionate GO Transit commuter**
