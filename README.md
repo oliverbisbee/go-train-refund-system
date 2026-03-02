@@ -341,32 +341,6 @@ This project uses the **Metrolinx Open API** to access GO Transit real-time data
 - `arrival.time`: Scheduled arrival (epoch format)
 - `arrival.delay`: Delay in seconds (negative = early)
 
-## 🛣️ Roadmap
-
-### v1.0 (MVP) - Q2 2024
-- Single GO train line support
-- Basic delay detection
-- Email draft generation
-- Simple dashboard
-
-### v1.1 - Q3 2024
-- All GO train lines
-- User authentication
-- Personal subscription management
-- Email history
-
-### v2.0 - Q4 2024
-- Automatic email submission
-- SMS/push notifications
-- Historical analytics dashboard
-- API rate limiting and caching
-
-### v3.0 - 2025
-- Mobile app (iOS/Android)
-- Premium features (Stripe billing)
-- Advanced analytics and reporting
-- Multi-tenant support
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
