@@ -4,89 +4,104 @@ from typing import List, Dict, Optional
 from app.core.config import settings
 
 
-class GTFSService:
+class ServiceAtGlanceService:
     def __init__(self):
         self.api_key = settings.OPENMETROLINX_API_KEY
-        # Don't add .json - API returns JSON by default
-        self.realtime_url = settings.GTFS_REALTIME_URL
+        self.trains_url = "https://api.openmetrolinx.com/OpenDataAPI/api/V1/ServiceataGlance/Trains/All"
 
-    def fetch_trip_updates(self) -> dict:
-        """Fetch GTFS Realtime TripUpdates feed in JSON format"""
+    def fetch_live_trains(self) -> dict:
+        """Fetch live train data from ServiceataGlance endpoint"""
         try:
-            # API key goes as query parameter
-            url = f"{self.realtime_url}?key={self.api_key}"
+            url = f"{self.trains_url}?key={self.api_key}"
             
-            response = requests.get(url, timeout=30)
+            # Add headers to mimic browser request
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             
             return response.json()
         except Exception as e:
-            print(f"Error fetching GTFS feed: {e}")
+            print(f"Error fetching train data: {e}")
             raise
 
     def get_delays_for_route(self, route_id: str) -> List[Dict]:
         """
-        Parse TripUpdates and extract delays for a specific route
+        Parse ServiceataGlance data and extract delays for a specific route
         Returns list of dicts with delay information
+        
+        route_id: Line code like "LW" for Lakeshore West
         """
-        feed = self.fetch_trip_updates()
+        data = self.fetch_live_trains()
         delays = []
 
-        # Parse JSON response
-        if 'entity' not in feed:
-            print("No entities in feed")
+        # Check if we have valid data
+        if 'Trips' not in data or 'Trip' not in data['Trips']:
+            print("No trips in feed")
             return delays
 
-        for entity in feed['entity']:
-            if 'trip_update' not in entity:
-                continue
-                
-            trip_update = entity['trip_update']
-            trip = trip_update.get('trip', {})
+        trips = data['Trips']['Trip']
+        
+        # Handle both list and single dict
+        if not isinstance(trips, list):
+            trips = [trips]
 
-            # Filter by route_id (e.g., "01" for Lakeshore West)
-            if route_id not in trip.get('route_id', ''):
+        for trip in trips:
+            # Filter by line code (e.g., "LW" for Lakeshore West)
+            if trip.get('LineCode') != route_id:
                 continue
 
-            # Extract stop time updates
-            for stop_time_update in trip_update.get('stop_time_updates', []):
-                arrival = stop_time_update.get('arrival', {})
-                
-                if arrival:
-                    delay_seconds = arrival.get('delay', 0)
-                    arrival_time = arrival.get('time', 0)
-                    
-                    delays.append({
-                        'trip_id': trip.get('trip_id'),
-                        'route_id': trip.get('route_id'),
-                        'stop_id': stop_time_update.get('stop_id'),
-                        'scheduled_arrival': arrival_time,
-                        'delay_seconds': delay_seconds,
-                        'timestamp': datetime.now()
-                    })
+            delay_seconds = trip.get('DelaySeconds', 0)
+            
+            # Create delay record for this trip
+            delays.append({
+                'trip_id': trip.get('TripNumber'),
+                'route_id': trip.get('LineCode'),
+                'origin_stop': trip.get('FirstStopCode'),
+                'destination_stop': trip.get('LastStopCode'),
+                'scheduled_start_time': trip.get('StartTime'),  # Format: "19:17"
+                'scheduled_end_time': trip.get('EndTime'),      # Format: "20:27"
+                'delay_seconds': delay_seconds,
+                'current_stop': trip.get('AtStationCode'),
+                'is_in_motion': trip.get('IsInMotion'),
+                'timestamp': datetime.now()
+            })
 
         return delays
 
     def is_within_time_window(
         self, 
         scheduled_time: time, 
-        feed_time: datetime, 
+        trip_time_str: str, 
         window_seconds: int = 300
     ) -> bool:
         """
-        Check if feed time is within ±window_seconds of scheduled time
-        Default window: 5 minutes (300 seconds)
+        Check if trip time is within ±window_seconds of scheduled time
+        
+        scheduled_time: time object from subscription (e.g., time(7, 15))
+        trip_time_str: string from API (e.g., "19:17")
+        window_seconds: tolerance window (default 5 minutes)
         """
-        # Convert scheduled_time to today's datetime for comparison
-        today = datetime.now().date()
-        scheduled_dt = datetime.combine(today, scheduled_time)
-        
-        # Extract time from feed datetime
-        feed_time_only = feed_time.time()
-        feed_dt = datetime.combine(today, feed_time_only)
-        
-        diff = abs((scheduled_dt - feed_dt).total_seconds())
-        return diff <= window_seconds
+        try:
+            # Parse trip time string "HH:MM"
+            trip_hour, trip_minute = map(int, trip_time_str.split(':'))
+            trip_time = time(trip_hour, trip_minute)
+            
+            # Convert both to datetime for comparison
+            today = datetime.now().date()
+            scheduled_dt = datetime.combine(today, scheduled_time)
+            trip_dt = datetime.combine(today, trip_time)
+            
+            diff = abs((scheduled_dt - trip_dt).total_seconds())
+            return diff <= window_seconds
+            
+        except Exception as e:
+            print(f"Error comparing times: {e}")
+            return False
 
 
-gtfs_service = GTFSService()
+# Create singleton instance
+gtfs_service = ServiceAtGlanceService()
